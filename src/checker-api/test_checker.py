@@ -7,7 +7,7 @@ import pytest
 from fastapi import HTTPException
 
 from app import (patch_status, pick_version, advise, check_url, authorise_subscriptions, _is_public,
-                 _public_transport, PublicOnlyBackend)
+                 _public_transport, PublicOnlyBackend, reconcile)
 
 
 def test_patch_status_table():
@@ -73,6 +73,19 @@ def test_connection_path_blocks_rebinding(monkeypatch):
     assert r.patch_status == "unknown" and r.reason.startswith("Not checked"), r.reason
 
 
+def test_stack_mismatch():
+    row = {"php_branch": "8.4", "end_of_life": False, "platform_patching": "Platform applies PHP patch versions",
+           "recommended_version": "8.4.27"}
+    r = reconcile(dict(row), "8.1.27", "vulnerable")
+    assert r["stack_mismatch"] and r["end_of_life"] is True and "differs from the configured 8.4" in r["platform_patching"]
+    r = reconcile(dict(row), "8.4.26", "vulnerable")
+    assert not r["stack_mismatch"] and r["platform_patching"].startswith("Platform")
+    eol_row = dict(row, php_branch="7.4", end_of_life=True)
+    assert reconcile(eol_row, "8.4.27", "ok")["end_of_life"] is False
+    r = reconcile(dict(row), None, "unknown")
+    assert not r["stack_mismatch"] and r["end_of_life"] is False
+
+
 def test_subscription_allow_list():
     a, b = "11111111-1111-1111-1111-111111111111", "22222222-2222-2222-2222-222222222222"
     os.environ["ALLOWED_SUBSCRIPTION_IDS"] = a
@@ -86,4 +99,4 @@ def test_subscription_allow_list():
 
 if __name__ == "__main__":
     test_patch_status_table(); test_worst_wins(); test_advise()
-    test_non_public_destinations_blocked(); test_embedded_ipv4_forms(); test_subscription_allow_list(); print("all tests passed")
+    test_non_public_destinations_blocked(); test_embedded_ipv4_forms(); test_stack_mismatch(); test_subscription_allow_list(); print("all tests passed")

@@ -247,7 +247,7 @@ $('#runScan').addEventListener('click', async ()=>{
     if(inv && inv.apps){
       $('#invOut').style.display='block';
       $('#invOut').innerHTML='<h2>Azure inventory ('+inv.count+' PHP apps)</h2>'+(inv.notes||[]).map(n=>'<p><b>'+esc(n)+'</b></p>').join('')+'<table><thead><tr><th>App</th><th>Resource group</th><th>Stack</th><th>Header</th><th>Who patches</th></tr></thead><tbody>'+
-        inv.apps.map(a=>'<tr><td class="mono">'+esc(a.name)+'</td><td>'+esc(a.resourceGroup)+'</td><td class="mono">'+esc(a.linuxFx||a.phpWin)+'</td><td>'+(a.header_status?'<span class="pill '+a.header_status+'">'+esc(a.advertised_version||a.header_status)+'</span>':'—')+'</td><td>'+esc(a.platform_patching)+'</td></tr>').join('')+'</tbody></table>';
+        inv.apps.map(a=>'<tr><td class="mono">'+esc(a.name)+'</td><td>'+esc(a.resourceGroup)+'</td><td class="mono">'+esc(a.linuxFx||a.phpWin)+'</td><td>'+(a.header_status?'<span class="pill '+a.header_status+'">'+esc(a.advertised_version||a.header_status)+'</span>':'—')+'</td><td>'+(a.stack_mismatch?'<b>⚠ ':'')+esc(a.platform_patching)+(a.stack_mismatch?'</b>':'')+'</td></tr>').join('')+'</tbody></table>';
     } else if(inv && inv.error){ $('#invOut').style.display='block'; $('#invOut').innerHTML='<h2>Azure inventory</h2><p>'+esc(inv.error)+'</p>'; }
   }catch(e){ $('#scanOut').innerHTML='<div class="empty">Error: '+esc(e.message)+'</div>'; }
   b.disabled=false; b.textContent='⚡ Instant scan (no AI)';

@@ -74,6 +74,8 @@ Keep it short and factual.""",
 Task: given one or more Azure subscription IDs, call inventoryAzurePhpApps (probe=true) and summarise every PHP workload you find.
 For each app report: name, resource group, configured PHP stack, advertised version, header status, whether the stack is end-of-life, and who patches it (platform or app owner).
 Explain the shared-responsibility split: App Service Linux built-in stacks 8.2+ are patched by the platform (verify the running version); end-of-life stacks, Windows PHP and custom containers are the app owner's job.
+If an app has stack_mismatch=true, the advertised PHP version differs from the configured stack: say so explicitly, do not state that the platform patches it, and recommend verifying the runtime that actually serves traffic. Container apps (DOCKER stacks) are candidates that may not run PHP at all.
+If the response says the inventory is incomplete (complete=false or notes), say so prominently.
 If the API returns an authorisation error, explain that the checker's managed identity needs the Reader role on that subscription.
 Output a markdown table, then a one-paragraph summary with counts.""",
     },

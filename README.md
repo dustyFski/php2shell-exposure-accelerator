@@ -22,7 +22,7 @@ Every system is classified as **VULNERABLE** (patch now), **UNKNOWN** (version h
 
 ## Quick start
 
-Prerequisites: PowerShell 7+, Azure CLI 2.60+ (with Bicep), Python 3.10+; Owner (or Contributor + User Access Administrator) on the target resource group; permission to create Entra ID app registrations and to assign users to enterprise applications (Application Administrator or Cloud Application Administrator, or ownership of the portal's enterprise application); and model quota for `gpt-4.1-mini` (or another chat model) in your region.
+Prerequisites: PowerShell 7+, Azure CLI 2.60+ (with Bicep), Python 3.10+; Owner (or Contributor + User Access Administrator) on the target resource group; permission to create Entra ID app registrations and to assign users to enterprise applications (Application Administrator or Cloud Application Administrator, or ownership of the portal's enterprise application); and model quota for `gpt-4.1-mini` (or another chat model) in your region. If the resource group is new, you also need permission to create it in the deployment subscription; registering Microsoft.Web and Microsoft.CognitiveServices requires subscription-level rights unless already registered.
 
 ```powershell
 az login
@@ -32,7 +32,7 @@ cd php2shell-exposure-accelerator
              -InventorySubscriptionIds <sub-a>,<sub-b>
 ```
 
-Only you can sign in at first; add colleagues with `-PortalUserObjectIds` / `-PortalGroupObjectIds` or under **Enterprise applications → Users and groups**. The script prints the portal URL and the agent names, and writes a `cleanup-<resource-group>-<subscription>.ps1` script. See [ARCHITECTURE.md](ARCHITECTURE.md) for every option, the identity model and the diagrams.
+Only you can sign in at first; add colleagues with `-PortalUserObjectIds` / `-PortalGroupObjectIds` or under **Enterprise applications → Users and groups**. The script prints the portal URL and the agent names, and writes a `cleanup-<resource-group>-<sub-id-prefix>.ps1` script. See [ARCHITECTURE.md](ARCHITECTURE.md) for every option, the identity model and the diagrams.
 
 ## Repository layout
 
@@ -48,21 +48,22 @@ Only you can sign in at first; add colleagues with `-PortalUserObjectIds` / `-Po
 
 ## Security model in brief
 
-* No keys or secrets: every service-to-service call uses a managed identity, and Foundry local auth is disabled.
+* No keys or secrets: every service-to-service call uses a managed identity. New Foundry accounts disable local authentication; verify the authentication settings when reusing an existing account.
 * The checker API is protected by App Service Authentication and only accepts tokens from the portal and Foundry managed identities.
-* The checker identity gets **Reader** only, only on the subscriptions you list, and both apps refuse inventory requests for any other subscription.
+* The checker identity gets **Reader** only, only on the subscriptions you list, and the checker API refuses inventory requests for any other subscription.
 * Portal sign-in is mandatory (single tenant) and limited to the users and groups you assign. Anyone you assign can see the inventory of the configured subscriptions.
 * URL checks only reach public internet addresses on ports 80/443/8080/8443: loopback, private, link-local and metadata addresses are refused, including via DNS re-binding. Only headers are read.
-* Agents treat tool output (headers, resource names) as untrusted data.
+* Agents are instructed to treat tool output (headers, resource names) as untrusted data.
+* If an app advertises a different PHP version than its configured stack, the inventory flags it instead of assuming the platform patches it.
 * The instant scan uses no AI. The AI features send scan targets and findings to your Foundry agents and model deployment; with the default GlobalStandard deployment they may be processed in any Azure region.
 
 ## Clean up
 
 ```powershell
-./cleanup-<resource-group>-<subscription>.ps1
+./cleanup-<resource-group>-<sub-id-prefix>.ps1
 ```
 
-It removes only what the deployment created: the resource group (if the script created it) or else just the deployed resources, the app registrations, role assignments and, in an existing Foundry project, the agents it created. It refuses to run against a different tenant.
+`<sub-id-prefix>` is the first eight characters of the subscription ID. If the script created the resource group, clean-up deletes the entire group, including anything added to it later. In an existing group it removes only the resources the deployment recorded. It also removes the app registrations, role assignments and, in an existing Foundry project, the agents the deployment created, and it refuses to run against a different tenant.
 
 ## Disclaimer
 

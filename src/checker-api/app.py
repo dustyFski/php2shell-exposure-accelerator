@@ -325,6 +325,33 @@ def authorise_subscriptions(subscription_ids: List[str]) -> List[str]:
     return list(dict.fromkeys(subs))
 
 
+def classify_row(row: dict) -> dict:
+    """Turns one Resource Graph row into an inventory entry with hosting model and patch responsibility."""
+    lfx = row.get("linuxFx") or ""
+    if lfx.upper().startswith("PHP|"):
+        branch = lfx.split("|", 1)[1]
+        hosting = "app-service-linux"
+    elif row.get("phpWin"):
+        branch = row["phpWin"]
+        hosting = "app-service-windows"
+    else:
+        branch = None
+        hosting = "container"
+    eol = branch in EOL_BRANCHES if branch else None
+    if hosting == "app-service-windows":
+        platform = "Not patched by platform (PHP on Windows App Service is out of support)"
+    elif hosting == "app-service-linux" and not eol:
+        platform = "Platform applies PHP patch versions on built-in Linux stacks - verify running version"
+    elif hosting == "app-service-linux":
+        platform = "End-of-life stack - platform does not patch; change stack to 8.3/8.4"
+    else:
+        platform = "Custom container (may not run PHP) - if it does, rebuild on a patched base image"
+    return {**row, "php_branch": branch, "hosting": hosting, "end_of_life": eol,
+            "recommended_version": FIXED.get(branch or "", "8.4.27"),
+            "platform_patching": platform,
+            "url": f"https://{row.get('hostName')}" if row.get("hostName") else None}
+
+
 async def azure_inventory(subscription_ids: List[str]):
     from azure.identity import DefaultAzureCredential
     cred = DefaultAzureCredential(exclude_interactive_browser_credential=True)
@@ -350,32 +377,7 @@ async def azure_inventory(subscription_ids: List[str]):
                 truncated = True
                 break
     rows = rows[:MAX_INVENTORY_ROWS]
-    out = []
-    for row in rows:
-        lfx = row.get("linuxFx") or ""
-        if lfx.upper().startswith("PHP|"):
-            branch = lfx.split("|", 1)[1]
-            hosting = "app-service-linux"
-        elif row.get("phpWin"):
-            branch = row["phpWin"]
-            hosting = "app-service-windows"
-        else:
-            branch = None
-            hosting = "container"
-        eol = branch in EOL_BRANCHES if branch else None
-        if hosting == "app-service-windows":
-            platform = "Not patched by platform (PHP on Windows App Service is out of support)"
-        elif hosting == "app-service-linux" and not eol:
-            platform = "Platform applies PHP patch versions on built-in Linux stacks - verify running version"
-        elif hosting == "app-service-linux":
-            platform = "End-of-life stack - platform does not patch; change stack to 8.3/8.4"
-        else:
-            platform = "Self-managed image - rebuild on patched base image"
-        out.append({**row, "php_branch": branch, "hosting": hosting, "end_of_life": eol,
-                    "recommended_version": FIXED.get(branch or "", "8.4.27"),
-                    "platform_patching": platform,
-                    "url": f"https://{row.get('hostName')}" if row.get("hostName") else None})
-    return out, truncated
+    return [classify_row(row) for row in rows], truncated
 
 
 # ---------------- API -----------------
@@ -427,6 +429,23 @@ async def api_advise(version: Optional[str] = Query(None, description="PHP versi
     return advise(version, hosting, edge)
 
 
+def reconcile(row: dict, advertised: Optional[str], header_status: str) -> dict:
+    """Adds header results to an inventory row. If the advertised PHP branch differs from the configured stack,
+    the configured stack says nothing reliable about the runtime serving traffic, so patch responsibility and
+    end-of-life status are not taken from it."""
+    row["advertised_version"] = advertised
+    row["header_status"] = header_status
+    adv_branch = branch_of(advertised)
+    row["stack_mismatch"] = bool(adv_branch and row.get("php_branch") and adv_branch != row["php_branch"])
+    if adv_branch:
+        row["end_of_life"] = adv_branch in EOL_BRANCHES
+    if row["stack_mismatch"]:
+        row["platform_patching"] = (f"Advertised PHP {advertised} differs from the configured {row['php_branch']} stack: "
+                                    "verify the runtime that serves traffic before assuming who patches")
+        row["recommended_version"] = FIXED.get(adv_branch, "8.4.27")
+    return row
+
+
 @app.post("/inventory/azure", operation_id="inventoryAzurePhpApps",
           summary="List PHP web apps in the given Azure subscriptions (via Resource Graph) and optionally header-check each one")
 async def api_inventory(req: InventoryRequest):
@@ -441,8 +460,7 @@ async def api_inventory(req: InventoryRequest):
         for a in apps:
             r = by_url.get((a.get("url") or "").rstrip('/'))
             if r:
-                a["advertised_version"] = r.php_version
-                a["header_status"] = r.patch_status
+                reconcile(a, r.php_version, r.patch_status)
     notes = []
     if truncated:
         notes.append(f"Inventory is INCOMPLETE: more than {MAX_INVENTORY_ROWS} apps or the query result was truncated.")
