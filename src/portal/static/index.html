@@ -1,0 +1,306 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PHP2Shell Exposure Check · Azure AI Foundry</title>
+<style>
+:root{
+  --navy:#0b1f3a; --navy2:#12305a; --blue:#0f6cbd; --blue-soft:#e8f1fb; --bg:#f4f6f9; --card:#fff;
+  --text:#1b1b1b; --muted:#5c6370; --border:#dde2ea; --red:#c50f1f; --red-soft:#fde7e9;
+  --amber:#b35c00; --amber-soft:#fff4e5; --green:#107c10; --green-soft:#e7f5e7; --violet:#5b3fa6;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:"Segoe UI",Aptos,-apple-system,BlinkMacSystemFont,sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.5}
+header{background:linear-gradient(120deg,var(--navy),var(--navy2));color:#fff;padding:18px 28px;display:flex;align-items:center;gap:18px}
+header .logo{width:40px;height:40px;border-radius:10px;background:#fff1;display:grid;place-items:center;font-size:22px}
+header h1{margin:0;font-size:20px;font-weight:600}
+header p{margin:2px 0 0;opacity:.8;font-size:13px}
+header .right{margin-left:auto;text-align:right;font-size:12px;opacity:.85}
+.strip{background:#fff;border-bottom:1px solid var(--border);padding:10px 28px;display:flex;gap:22px;flex-wrap:wrap;font-size:13px;color:var(--muted)}
+.strip b{color:var(--text)}
+.strip a{color:var(--blue);text-decoration:none}
+main{max-width:1320px;margin:0 auto;padding:22px 28px;display:grid;grid-template-columns:380px 1fr;gap:22px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:14px;box-shadow:0 1px 2px rgba(0,0,0,.05);padding:18px}
+h2{font-size:15px;margin:0 0 10px;font-weight:600}
+label{display:block;font-size:12px;font-weight:600;color:var(--muted);margin:12px 0 4px;text-transform:uppercase;letter-spacing:.04em}
+textarea,input,select{width:100%;font:inherit;border:1px solid var(--border);border-radius:8px;padding:8px 10px;background:#fff}
+textarea{min-height:130px;font-family:Consolas,monospace;font-size:12.5px}
+.row{display:flex;gap:10px}
+.row>*{flex:1}
+button{font:inherit;border:0;border-radius:8px;padding:10px 14px;cursor:pointer;font-weight:600}
+.btn-primary{background:var(--blue);color:#fff;width:100%;margin-top:14px}
+.btn-primary:hover{background:#0c5aa0}
+.btn-ghost{background:var(--blue-soft);color:var(--blue);width:100%;margin-top:8px}
+button:disabled{opacity:.55;cursor:wait}
+.hint{font-size:12px;color:var(--muted);margin-top:8px}
+.tabs{display:flex;gap:4px;margin-bottom:14px;border-bottom:1px solid var(--border)}
+.tab{background:none;border-radius:8px 8px 0 0;padding:9px 14px;color:var(--muted);font-weight:600}
+.tab.active{color:var(--blue);box-shadow:inset 0 -2px 0 var(--blue)}
+.panel{display:none}.panel.active{display:block}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px}
+.kpi{border-radius:12px;padding:12px 14px;border:1px solid var(--border);background:#fff}
+.kpi .n{font-size:26px;font-weight:700;line-height:1.1}
+.kpi .l{font-size:12px;color:var(--muted)}
+.kpi.v .n{color:var(--red)} .kpi.u .n{color:var(--amber)} .kpi.o .n{color:var(--green)}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);padding:8px 10px;border-bottom:1px solid var(--border);background:#fafbfc}
+td{padding:9px 10px;border-bottom:1px solid var(--border);vertical-align:top}
+.pill{display:inline-block;padding:2px 10px;border-radius:999px;font-size:11.5px;font-weight:700}
+.pill.vulnerable{background:var(--red-soft);color:var(--red)}
+.pill.unknown{background:var(--amber-soft);color:var(--amber)}
+.pill.ok{background:var(--green-soft);color:var(--green)}
+.mono{font-family:Consolas,monospace;font-size:12px}
+.pipeline{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:14px}
+.agent{border:1px solid var(--border);border-radius:12px;padding:12px;background:#fff;position:relative}
+.agent .t{font-weight:700;font-size:13px;display:flex;align-items:center;gap:8px}
+.agent .d{font-size:12px;color:var(--muted);margin-top:2px}
+.agent .s{margin-top:8px;font-size:12px;font-weight:600}
+.agent.running{border-color:var(--blue);box-shadow:0 0 0 3px var(--blue-soft)}
+.agent.done{border-color:#9ad29a}
+.agent.err{border-color:var(--red)}
+.dot{width:9px;height:9px;border-radius:50%;background:#c8ccd2;display:inline-block}
+.running .dot{background:var(--blue);animation:pulse 1s infinite}
+.done .dot{background:var(--green)} .err .dot{background:var(--red)}
+@keyframes pulse{50%{opacity:.3}}
+.tools{margin-top:6px;display:flex;flex-wrap:wrap;gap:4px}
+.tools span{font-size:10.5px;background:#f0f2f5;border-radius:6px;padding:1px 6px;font-family:Consolas,monospace}
+.out{border:1px solid var(--border);border-radius:12px;background:#fff;padding:16px 18px;margin-bottom:12px}
+.out h4{margin:0 0 8px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--violet)}
+.md h1,.md h2,.md h3{font-size:15px;margin:14px 0 6px}
+.md table{margin:8px 0}
+.md code{background:#f0f2f5;padding:1px 5px;border-radius:4px;font-size:12px}
+.md pre{background:#0b1f3a;color:#e8eef7;padding:10px;border-radius:8px;overflow:auto}
+.md ul,.md ol{padding-left:20px;margin:6px 0}
+.md p{margin:6px 0}
+.chat{display:flex;flex-direction:column;gap:10px;min-height:340px;max-height:620px;overflow:auto;padding:4px}
+.msg{max-width:88%;padding:10px 14px;border-radius:12px}
+.msg.user{align-self:flex-end;background:var(--blue);color:#fff;border-bottom-right-radius:3px}
+.msg.bot{align-self:flex-start;background:#fff;border:1px solid var(--border);border-bottom-left-radius:3px}
+.msg .meta{font-size:11px;color:var(--muted);margin-top:6px}
+.chatbar{display:flex;gap:8px;margin-top:12px}
+.chatbar input{flex:1}
+.chatbar button{background:var(--blue);color:#fff}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.chip{background:var(--blue-soft);color:var(--blue);border-radius:999px;padding:4px 10px;font-size:12px;cursor:pointer;border:0;font-weight:500}
+.empty{color:var(--muted);text-align:center;padding:40px 10px}
+.arch{font-size:12px;color:var(--muted)}
+.arch b{color:var(--text)}
+footer{max-width:1320px;margin:0 auto;padding:6px 28px 30px;font-size:11.5px;color:var(--muted)}
+@media(max-width:1000px){main{grid-template-columns:1fr}.pipeline,.kpis{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">🛡️</div>
+  <div>
+    <h1>PHP2Shell Exposure Check</h1>
+    <p>Multi-agent assessment for CVE-2026-109618 &amp; CVE-2026-109619 · powered by Azure AI Foundry</p>
+  </div>
+  <div class="right" id="projinfo">Azure AI Foundry · Agent Service</div>
+</header>
+<div class="strip">
+  <span>Fixed releases: <b>8.5.12 · 8.4.27 · 8.3.36 · 8.2.35</b></span>
+  <span>Severity: <b>CVSS v4.0 9.2</b> · unauthenticated RCE</span>
+  <span>Azure WAF: <b>Front Door rule 99006001</b> · App Gateway rewrite</span>
+  <span><a href="https://www.php.net/archive/2026.php#2026-10-21-5" target="_blank">php.net advisory</a> · <a href="https://techcommunity.microsoft.com/blog/azurenetworksecurityblog/addressing-php2shell-cve-2026-109618-and-cve-2026-109619-upgrade-guidance-and-az/4566623" target="_blank">Azure WAF guidance</a></span>
+</div>
+
+<main>
+  <section>
+    <div class="card">
+      <h2>What should we check?</h2>
+      <label for="urls">Websites / hostnames (one per line)</label>
+      <textarea id="urls"></textarea>
+      <label for="sub">Azure subscription ID (optional)</label>
+      <input id="sub" placeholder="00000000-0000-0000-0000-000000000000">
+      <div class="row">
+        <div><label for="hosting">Hosting</label>
+          <select id="hosting">
+            <option value="app-service-linux">App Service (Linux)</option>
+            <option value="app-service-windows">App Service (Windows)</option>
+            <option value="container">Containers (AKS / ACA)</option>
+            <option value="vm">VMs / on-prem</option>
+            <option value="unknown">Mixed / unknown</option>
+          </select></div>
+        <div><label for="edge">Edge / WAF</label>
+          <select id="edge">
+            <option value="none">No WAF</option>
+            <option value="front-door">Azure Front Door</option>
+            <option value="app-gateway">Application Gateway</option>
+            <option value="agc">App Gateway for Containers</option>
+          </select></div>
+      </div>
+      <label style="display:flex;gap:8px;align-items:flex-start;text-transform:none;letter-spacing:0;font-weight:500;color:var(--text);margin-top:14px"><input type="checkbox" id="owns" style="width:auto;margin-top:3px"> I confirm my organisation owns these systems or is authorised to assess them.</label>
+      <button class="btn-primary" id="runAgents">▶ Run multi-agent assessment</button>
+      <button class="btn-ghost" id="runScan">⚡ Instant scan (no AI)</button>
+      <div class="hint">Only check systems you own or are authorised to assess. Checks read HTTP response headers and Azure metadata only; no exploit traffic is ever sent.</div>
+    </div>
+    <div class="card" style="margin-top:16px">
+      <h2>How it works</h2>
+      <div class="arch">
+        <p><b>1 · URL Scanner agent</b> checks the PHP version each site advertises against the PHP2Shell vulnerable-version table (same logic as OpenAI's open-source php2shell-checker).</p>
+        <p><b>2 · Azure Inventory agent</b> uses Azure Resource Graph to find PHP workloads and shows who patches them: the platform or you.</p>
+        <p><b>3 · Remediation Advisor agent</b> turns the findings into a prioritised plan: patch versions, php.net interim mitigations, Azure WAF and detection.</p>
+        <p><b>Orchestrator agent</b> combines all three for a conversational assessment.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="tabs">
+      <button class="tab active" data-tab="pipeline">Multi-agent assessment</button>
+      <button class="tab" data-tab="scan">Instant scan</button>
+      <button class="tab" data-tab="chat">Ask the agent</button>
+    </div>
+
+    <div class="panel active" id="panel-pipeline">
+      <div class="pipeline">
+        <div class="agent" id="ag-scanner"><div class="t"><span class="dot"></span>URL Scanner</div><div class="d">php2shell-url-scanner</div><div class="s">Waiting</div><div class="tools"></div></div>
+        <div class="agent" id="ag-inventory"><div class="t"><span class="dot"></span>Azure Inventory</div><div class="d">php2shell-azure-inventory</div><div class="s">Waiting</div><div class="tools"></div></div>
+        <div class="agent" id="ag-advisor"><div class="t"><span class="dot"></span>Remediation Advisor</div><div class="d">php2shell-remediation-advisor</div><div class="s">Waiting</div><div class="tools"></div></div>
+      </div>
+      <div id="pipeOut"><div class="card empty">Click <b>Run multi-agent assessment</b> to start. The scanner and inventory agents run in parallel, then the advisor builds the plan.</div></div>
+    </div>
+
+    <div class="panel" id="panel-scan">
+      <div class="kpis">
+        <div class="kpi"><div class="n" id="k-total">–</div><div class="l">Systems checked</div></div>
+        <div class="kpi v"><div class="n" id="k-v">–</div><div class="l">Vulnerable</div></div>
+        <div class="kpi u"><div class="n" id="k-u">–</div><div class="l">Unknown (verify)</div></div>
+        <div class="kpi o"><div class="n" id="k-o">–</div><div class="l">OK (by version)</div></div>
+      </div>
+      <div class="card" id="scanOut"><div class="empty">Click <b>Instant scan</b> for a deterministic, AI-free check (the same logic as OpenAI's checker).</div></div>
+      <div class="card" id="invOut" style="margin-top:14px;display:none"></div>
+    </div>
+
+    <div class="panel" id="panel-chat">
+      <div class="card">
+        <div class="chat" id="chat"><div class="empty">Ask the <b>PHP2Shell orchestrator agent</b> anything about your exposure.</div></div>
+        <div class="chips">
+          <button class="chip" data-q="We own the sites in the list on the left. Check them all and give me an executive summary.">Check my sites</button>
+          <button class="chip" data-q="We run PHP 8.1.20 on Ubuntu VMs behind Application Gateway v2. What exactly should we do today?">PHP 8.1 on VMs</button>
+          <button class="chip" data-q="Inventory my Azure subscription (which we own) for PHP workloads and tell me who needs to patch what.">Inventory my Azure</button>
+          <button class="chip" data-q="php -v says PHP 8.3.35 (cli). Am I safe?">Check a version</button>
+        </div>
+        <div class="chatbar"><input id="chatIn" placeholder="e.g. Is www.example.com exposed?"><button id="chatSend">Send</button></div>
+      </div>
+    </div>
+  </section>
+</main>
+<footer>Deployed in your own Azure subscription. The instant scan does not use AI. The AI features send scan targets and findings to the Azure AI Foundry agents and the model deployment configured for this portal, which may process them in other Azure regions depending on the deployment type (for example GlobalStandard). Not an official Microsoft or PHP advisory. This is a version-based exposure check, not proof of compromise or of patching: headers can be hidden or changed, and vendor backports may fix older version numbers. "Unknown" does not mean patched. Upgrading PHP is the only complete fix.</footer>
+
+<script>
+const $ = s => document.querySelector(s);
+$('#urls').placeholder = 'www.example.com\nportal.example.com\nhttps://careers.example.com';
+fetch('/api/config').then(r=>r.json()).then(c=>{ if(c.default_subscription) $('#sub').value=c.default_subscription; $('#projinfo').innerHTML='Azure AI Foundry · project <b>'+esc(c.project)+'</b>'+(c.user?'<br>Signed in as <b>'+esc(c.user)+'</b>':''); if(c.agents){ AGENT_NAMES=c.agents; ['scanner','inventory','advisor'].forEach(k=>{ const d=document.querySelector('#ag-'+k+' .d'); if(d&&c.agents[k]) d.textContent=c.agents[k]; }); } });
+let AGENT_NAMES={orchestrator:'php2shell-orchestrator'};
+
+document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>showTab(t.dataset.tab)));
+function showTab(n){document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.tab===n));document.querySelectorAll('.panel').forEach(p=>p.classList.toggle('active',p.id==='panel-'+n));}
+
+function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function urls(){return $('#urls').value.split(/[\s,]+/).map(s=>s.trim()).filter(Boolean);}
+
+// --- minimal, safe markdown renderer ---
+function md(src){
+  const lines = esc(src||'').split('\n'); let html='', i=0, inList=null;
+  const inline = s => s.replace(/`([^`]+)`/g,'<code>$1</code>').replace(/\*\*([^*]+)\*\*/g,'<b>$1</b>').replace(/(^|\W)\*([^*]+)\*(?=\W|$)/g,'$1<i>$2</i>')
+     .replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g,'<a href="$2" target="_blank" rel="noopener">$1</a>');
+  const closeList=()=>{ if(inList){ html+='</'+inList+'>'; inList=null; } };
+  while(i<lines.length){
+    let l=lines[i];
+    if(/^\s*\|.*\|\s*$/.test(l) && i+1<lines.length && /^\s*\|?\s*:?-{2,}/.test(lines[i+1])){
+      closeList(); const row=r=>r.trim().replace(/^\||\|$/g,'').replace(/`[^`]*`/g,m=>m.replace(/\|/g,'\u2502')).replace(/\\\|/g,'\u2502').split('|').map(c=>c.trim().replace(/\u2502/g,'|'));
+      const head=row(l); i+=2; html+='<table><thead><tr>'+head.map(h=>'<th>'+inline(h)+'</th>').join('')+'</tr></thead><tbody>';
+      while(i<lines.length && /^\s*\|.*\|\s*$/.test(lines[i])){ html+='<tr>'+row(lines[i]).map(c=>'<td>'+pillify(inline(c))+'</td>').join('')+'</tr>'; i++; }
+      html+='</tbody></table>'; continue;
+    }
+    if(/^```/.test(l)){ closeList(); let code=''; i++; while(i<lines.length && !/^```/.test(lines[i])){ code+=lines[i]+'\n'; i++; } html+='<pre>'+code+'</pre>'; i++; continue; }
+    let m;
+    if(m=l.match(/^(#{1,4})\s+(.*)/)){ closeList(); html+='<h3>'+inline(m[2])+'</h3>'; }
+    else if(m=l.match(/^\s*[-*]\s+(.*)/)){ if(inList!=='ul'){closeList(); html+='<ul>'; inList='ul';} html+='<li>'+inline(m[1])+'</li>'; }
+    else if(m=l.match(/^\s*\d+[.)]\s+(.*)/)){ if(inList!=='ol'){closeList(); html+='<ol>'; inList='ol';} html+='<li>'+inline(m[1])+'</li>'; }
+    else if(l.trim()===''){ closeList(); }
+    else { closeList(); html+='<p>'+inline(l)+'</p>'; }
+    i++;
+  }
+  closeList(); return html;
+}
+function pillify(s){ return s.replace(/(<b>)?\b(VULNERABLE|UNKNOWN|OK)\b(<\/b>)?/g,(_,a,w)=>'<span class="pill '+w.toLowerCase()+'">'+w+'</span>'); }
+
+async function post(url, body){ const r = await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}); if(!r.ok) throw new Error((await r.text()).slice(0,300)); return r.json(); }
+
+// --- Instant scan ---
+$('#runScan').addEventListener('click', async ()=>{
+  if(!$('#owns').checked){ alert('Please confirm you own or are authorised to assess these systems.'); return; }
+  showTab('scan'); const b=$('#runScan'); b.disabled=true; b.textContent='Scanning…';
+  $('#scanOut').innerHTML='<div class="empty">Checking response headers…</div>';
+  try{
+    const sub=$('#sub').value.trim();
+    const res = await post('/api/scan',{urls:urls(), subscription_ids: sub?[sub]:[], authorised:true});
+    const rows = res.urls||[]; const c={vulnerable:0,unknown:0,ok:0}; rows.forEach(r=>c[r.patch_status]++);
+    $('#k-total').textContent=rows.length; $('#k-v').textContent=c.vulnerable; $('#k-u').textContent=c.unknown; $('#k-o').textContent=c.ok;
+    $('#scanOut').innerHTML='<h2>External header check</h2><table><thead><tr><th>Target</th><th>Status</th><th>Advertised PHP</th><th>Fix to install</th><th>Note</th></tr></thead><tbody>'+
+      rows.map(r=>'<tr><td class="mono">'+esc(r.target.replace(/^https?:\/\//,''))+'</td><td><span class="pill '+r.patch_status+'">'+r.patch_status.toUpperCase()+'</span></td><td class="mono">'+esc(r.php_version||'hidden')+'</td><td class="mono">'+esc(r.patch_status==='ok'?'—':(r.recommended_version||(r.end_of_life?'8.4.27 (migrate)':'verify on server')))+'</td><td>'+esc(r.end_of_life?'End-of-life branch':(r.patch_status==='unknown'?'Hidden ≠ patched':''))+'</td></tr>').join('')+'</tbody></table>';
+    const inv=res.azure;
+    if(inv && inv.apps){
+      $('#invOut').style.display='block';
+      $('#invOut').innerHTML='<h2>Azure inventory ('+inv.count+' PHP apps)</h2>'+(inv.notes||[]).map(n=>'<p><b>'+esc(n)+'</b></p>').join('')+'<table><thead><tr><th>App</th><th>Resource group</th><th>Stack</th><th>Header</th><th>Who patches</th></tr></thead><tbody>'+
+        inv.apps.map(a=>'<tr><td class="mono">'+esc(a.name)+'</td><td>'+esc(a.resourceGroup)+'</td><td class="mono">'+esc(a.linuxFx||a.phpWin)+'</td><td>'+(a.header_status?'<span class="pill '+a.header_status+'">'+esc(a.advertised_version||a.header_status)+'</span>':'—')+'</td><td>'+esc(a.platform_patching)+'</td></tr>').join('')+'</tbody></table>';
+    } else if(inv && inv.error){ $('#invOut').style.display='block'; $('#invOut').innerHTML='<h2>Azure inventory</h2><p>'+esc(inv.error)+'</p>'; }
+  }catch(e){ $('#scanOut').innerHTML='<div class="empty">Error: '+esc(e.message)+'</div>'; }
+  b.disabled=false; b.textContent='⚡ Instant scan (no AI)';
+});
+
+// --- Multi-agent pipeline ---
+function setAgent(id,state,msg,tools){ const el=$('#ag-'+id); el.className='agent '+state; el.querySelector('.s').textContent=msg; if(tools) el.querySelector('.tools').innerHTML=tools.map(t=>'<span>'+esc(String(t).replace(/^php2shell_checker_/,''))+'</span>').join(''); }
+function outBlock(title, text, secs){ return '<div class="out"><h4>'+esc(title)+(secs?' · '+secs+'s':'')+'</h4><div class="md">'+md(text)+'</div></div>'; }
+async function timed(fn){ const t=performance.now(); const r=await fn(); return [r, ((performance.now()-t)/1000).toFixed(1)]; }
+
+$('#runAgents').addEventListener('click', async ()=>{
+  if(!$('#owns').checked){ alert('Please confirm you own or are authorised to assess these systems.'); return; }
+  showTab('pipeline'); const b=$('#runAgents'); b.disabled=true; b.textContent='Agents working…';
+  ['scanner','inventory','advisor'].forEach(a=>setAgent(a,'','Waiting',[]));
+  $('#pipeOut').innerHTML='';
+  const list=urls(), sub=$('#sub').value.trim(), hosting=$('#hosting').value, edge=$('#edge').value;
+  let scanText='', invText='';
+  try{
+    const jobs=[];
+    if(list.length){ setAgent('scanner','running','Calling checker tools…');
+      jobs.push(timed(()=>post('/api/agent',{agent:'scanner',message:'Our organisation owns and is authorised to assess these sites. Check: '+list.join(', ')})).then(([r,s])=>{ scanText=r.text; setAgent('scanner','done','Done in '+s+'s',r.tool_calls); $('#pipeOut').insertAdjacentHTML('beforeend',outBlock('URL Scanner',r.text,s)); }).catch(e=>{ setAgent('scanner','err','Error'); scanText='Scanner error: '+e.message; }));
+    } else setAgent('scanner','done','Skipped (no URLs)');
+    if(sub){ setAgent('inventory','running','Querying Azure Resource Graph…');
+      jobs.push(timed(()=>post('/api/agent',{agent:'inventory',message:'We own this subscription. Inventory PHP workloads in Azure subscription '+sub+' (probe=true).'})).then(([r,s])=>{ invText=r.text; setAgent('inventory','done','Done in '+s+'s',r.tool_calls); $('#pipeOut').insertAdjacentHTML('beforeend',outBlock('Azure Inventory',r.text,s)); }).catch(e=>{ setAgent('inventory','err','Error'); invText='Inventory error: '+e.message; }));
+    } else setAgent('inventory','done','Skipped (no subscription)');
+    await Promise.all(jobs);
+    setAgent('advisor','running','Building remediation plan…');
+    const prompt='Build a prioritised remediation plan from these findings. Hosting model: '+hosting+'. Edge/WAF: '+edge+'.\n\n## URL scan findings\n'+(scanText||'none')+'\n\n## Azure inventory findings\n'+(invText||'none')+'\n\nEnd with a 3-line executive summary for a CISO.';
+    const [r,s]=await timed(()=>post('/api/agent',{agent:'advisor',message:prompt}));
+    setAgent('advisor','done','Done in '+s+'s',r.tool_calls);
+    $('#pipeOut').insertAdjacentHTML('beforeend',outBlock('Remediation Advisor · action plan',r.text,s));
+  }catch(e){ setAgent('advisor','err','Error'); $('#pipeOut').insertAdjacentHTML('beforeend','<div class="card">Error: '+esc(e.message)+'</div>'); }
+  b.disabled=false; b.textContent='▶ Run multi-agent assessment';
+});
+
+// --- Chat with orchestrator ---
+let prevId=null;
+function addMsg(role, html, meta){ const c=$('#chat'); if(c.querySelector('.empty')) c.innerHTML=''; c.insertAdjacentHTML('beforeend','<div class="msg '+role+'">'+html+(meta?'<div class="meta">'+meta+'</div>':'')+'</div>'); c.scrollTop=c.scrollHeight; }
+async function send(q){
+  if(!q) return; addMsg('user',esc(q)); $('#chatIn').value=''; $('#chatSend').disabled=true;
+  addMsg('bot','<span class="dot" style="background:var(--blue)"></span> Thinking and calling tools…'); const ph=$('#chat').lastElementChild;
+  try{
+    const own = $('#owns').checked ? ' (We own and are authorised to assess these systems.)' : '';
+    const ctx = own + ' ' + (/list on the left|my sites/i.test(q) ? q+'\nSites: '+urls().join(', ')+'\nHosting: '+$('#hosting').value+', edge: '+$('#edge').value : (/my azure|subscription/i.test(q) && $('#sub').value ? q+'\nSubscription: '+$('#sub').value.trim() : q));
+    const [r,s]=await timed(()=>post('/api/agent',{agent:'orchestrator',message:ctx,previous_response_id:prevId}));
+    prevId=r.response_id; ph.remove();
+    addMsg('bot','<div class="md">'+md(r.text)+'</div>', AGENT_NAMES.orchestrator+' · '+s+'s'+(r.tool_calls.length?' · tools: '+esc(r.tool_calls.map(t=>String(t).replace(/^php2shell_checker_/,'')).join(', ')):''));
+  }catch(e){ ph.innerHTML='Error: '+esc(e.message); }
+  $('#chatSend').disabled=false;
+}
+$('#chatSend').addEventListener('click',()=>send($('#chatIn').value.trim()));
+$('#chatIn').addEventListener('keydown',e=>{ if(e.key==='Enter') send($('#chatIn').value.trim()); });
+document.querySelectorAll('.chip').forEach(c=>c.addEventListener('click',()=>{ showTab('chat'); send(c.dataset.q); }));
+</script>
+</body>
+</html>

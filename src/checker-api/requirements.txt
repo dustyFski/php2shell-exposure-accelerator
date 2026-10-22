@@ -1,0 +1,8 @@
+fastapi
+uvicorn
+gunicorn
+httpx==0.28.1
+httpcore==1.0.9
+anyio>=4
+pydantic>=2
+azure-identity

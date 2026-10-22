@@ -1,0 +1,11 @@
+PHP2Shell Exposure Accelerator
+Copyright 2026 The PHP2Shell Exposure Accelerator contributors
+
+This product is licensed under the Apache License, Version 2.0 (see LICENSE).
+
+This product includes logic derived from php2shell-checker
+(https://github.com/openai/php2shell-checker), licensed under the Apache License,
+Version 2.0. Derived material: the vulnerable-version table, version parsing and
+classification rules, and the header-check approach in src/checker-api/app.py,
+ported from JavaScript to Python and modified (Azure inventory, remediation advice,
+SSRF protections). php2shell-checker is not affiliated with or endorsing this project.

@@ -1,0 +1,7 @@
+fastapi
+uvicorn
+gunicorn
+httpx
+pydantic>=2
+azure-identity
+
